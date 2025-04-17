@@ -99,13 +99,15 @@ public void recoverFromMongo() {
             progressMap.put(result.getPartNumber(), result.getProgress());
         }
 
-        // Вычисляем общий прогресс
+
         if (!progressMap.isEmpty()) {
             double totalProgress = progressMap.values().stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
-            taskStatus.setTotalProgress(totalProgress);
+            .mapToDouble(Double::doubleValue)
+            .average()
+            .orElse(0.0);
+    
+                double roundedProgress = Math.round(totalProgress * 100.0) / 100.0;
+                taskStatus.setTotalProgress(roundedProgress);
         }
 
         idAndStatus.put(requestId, taskStatus);
@@ -234,12 +236,12 @@ public void recieveAnswer(CrackHashWorkerResponse response) {
         result.setRequestId(response.getRequestId());
         result.setPartNumber(response.getPartNumber());
         result.setAnswer(answer);
-        result.setProgress(100); // При нахождении ответа устанавливаем 100%
+        result.setProgress(response.getProgress()); // При нахождении ответа устанавливаем 100%
         resultRepository.save(result);
 
         // Обновляем статус
         status.getAnswer().add(answer);
-        status.updateProgress(response.getPartNumber(), 100); // Прогресс части = 100%
+        status.updateProgress(response.getPartNumber(), response.getProgress()); // Прогресс части = 100%
         status.setStatus(calculateCurrentStatus(status));
 
         // Обновляем задачу в MongoDB

@@ -28,7 +28,7 @@ public class TaskStatus {
     private double totalProgress;
 
     public TaskStatus() {
-        this.status = TaskStatusEnum.IN_PROGRESS;
+        this.status = TaskStatusEnum.PENDING;
         this.answer = new ArrayList<>();
         this.startTime = Instant.now();
         this.progressMap = new ConcurrentHashMap<>();
