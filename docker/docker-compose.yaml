@@ -1,0 +1,127 @@
+version: "3.8"
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - app-network
+    restart: always
+
+  mongo-primary:
+    image: mongo:6.0
+    container_name: mongo-primary
+    ports:
+      - "27017:27017"
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  mongo-secondary1:
+    image: mongo:6.0
+    container_name: mongo-secondary1
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  mongo-secondary2:
+    image: mongo:6.0
+    container_name: mongo-secondary2
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  mongo-init-replica:
+    image: mongo:6.0
+    container_name: mongo-init-replica
+    depends_on:
+      - mongo-primary
+      - mongo-secondary1
+      - mongo-secondary2
+    networks:
+      - app-network
+    restart: "no"
+    entrypoint: >
+      bash -c "
+        sleep 5;
+        echo 'Initiating replica set...';
+        mongosh --host mongo-primary --eval '
+          rs.initiate({
+            _id: \"rs0\",
+            members: [
+              { _id: 0, host: \"mongo-primary:27017\" },
+              { _id: 1, host: \"mongo-secondary1:27017\" },
+              { _id: 2, host: \"mongo-secondary2:27017\" }
+            ]
+          })
+        ';
+      "
+
+  manager:
+    container_name: manager
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: manager
+        SERVICE_PORT: 8080
+    ports:
+      - "8080:8080"
+    environment:
+      WORKER_PORT: 8081
+      TASK_TIMEOUT: "PT10M"
+      HASH_PARTS: "3"
+      LETTERS_AND_DIGITS: "abcdefghijklmnopqrstuvwxyz0123456789"
+      MONGO_URI: mongodb://mongo-primary:27017/?replicaSet=rs0
+      HEALTH_CHECK_TIMEOUT: 2000
+    depends_on:
+      - rabbitmq
+      - mongo-primary
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: worker
+        SERVICE_PORT: 8081
+    deploy:
+      replicas: 3
+    environment:
+      MANAGER_PORT: 8080
+      TASK_TIMEOUT: "PT10M"
+      PROGRESS_UPDATE_INTERVAL: "1000000"
+    depends_on:
+      - manager
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  ui:
+    image: nginx:latest
+    container_name: hash-cracker-ui
+    volumes:
+      - ./ui:/usr/share/nginx/html
+    ports:
+      - "8081:80"
+    depends_on:
+      - manager
+    networks:
+      - app-network
+    restart: unless-stopped
