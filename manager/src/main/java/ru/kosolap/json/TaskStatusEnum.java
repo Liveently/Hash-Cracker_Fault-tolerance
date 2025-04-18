@@ -9,8 +9,7 @@ public enum TaskStatusEnum {
     PARTIAL_SUCCESS_WORKING("PARTIAL_SUCCESS_WORKING"),     // Частично успешно, но ещё работает
     SUCCESS("SUCCESS"),            // Готово
     TIMEOUT("TIMEOUT"),       // Истекло время
-    NO_RESULTS("NO_RESULTS"),     //нет результата
-    PENDING("PENDING");
+    NO_RESULTS("NO_RESULTS");     //нет результата
 
 
     private final String value;

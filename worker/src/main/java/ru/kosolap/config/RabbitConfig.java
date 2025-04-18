@@ -70,7 +70,7 @@ public class RabbitConfig {
     @Bean
     public MarshallingMessageConverter messageConverter(Jaxb2Marshaller marshaller) {
         MarshallingMessageConverter converter = new MarshallingMessageConverter(marshaller, marshaller);
-        converter.setContentType("application/xml"); // Добавьте это
+        converter.setContentType("application/xml"); 
         return converter;
     }
 
@@ -79,7 +79,6 @@ public class RabbitConfig {
                                        MarshallingMessageConverter messageConverter) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(messageConverter);
-        // Добавьте настройки для надежности
         rabbitTemplate.setChannelTransacted(true);
         rabbitTemplate.setReplyTimeout(60000);
         return rabbitTemplate;
@@ -92,9 +91,9 @@ public class RabbitConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
-        factory.setMissingQueuesFatal(false); // Важно для обработки отсутствующих очередей
+        factory.setMissingQueuesFatal(false); 
         factory.setAutoStartup(true);
-        factory.setPrefetchCount(1); // Один message за раз
+        factory.setPrefetchCount(1);
         return factory;
     }
 

@@ -28,7 +28,7 @@ public class TaskStatus {
     private double totalProgress;
 
     public TaskStatus() {
-        this.status = TaskStatusEnum.PENDING;
+        this.status = TaskStatusEnum.IN_PROGRESS;
         this.answer = new ArrayList<>();
         this.startTime = Instant.now();
         this.progressMap = new ConcurrentHashMap<>();
@@ -68,7 +68,15 @@ public class TaskStatus {
 
     @JsonIgnore
     public boolean isCompleted() {
-        System.out.println("Точно готово!");
-        return progressMap.values().stream().allMatch(p -> p == 100.0);
+        int totalParts;
+    try {
+        totalParts = Integer.parseInt(System.getenv().getOrDefault("HASH_PARTS", "3"));
+    } catch (NumberFormatException e) {
+        System.err.println("[ERROR] Invalid HASH_PARTS value: " + System.getenv("HASH_PARTS"));
+        return false;
+    }
+
+    return progressMap.size() == totalParts && 
+           progressMap.values().stream().allMatch(p -> p == 100.0);
     }
 }

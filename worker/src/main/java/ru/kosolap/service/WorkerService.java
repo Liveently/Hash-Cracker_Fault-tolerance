@@ -35,12 +35,11 @@ public class WorkerService {
 
     @RabbitListener(queues = "task_queue")
     public void receiveTask(CrackHashManagerRequest body) {
-        // Вызов метода для обработки задачи
         crackHashTask(body);
     }
 
     @Async
-    public void crackHashTask(CrackHashManagerRequest body) { // получает задачу
+    public void crackHashTask(CrackHashManagerRequest body) { 
         System.out.println("Received task: " + body.getRequestId());
 
 
@@ -69,7 +68,7 @@ public class WorkerService {
         Generator<String> gen = CombinatoricsFactory.createPermutationWithRepetitionGenerator(vector, POSITIONS_NUM);
 
         long idx = 0;
-        long totalPermutations = (long) gen.getNumberOfGeneratedObjects(); // Общее количество комбинаций
+        long totalPermutations = (long) gen.getNumberOfGeneratedObjects(); 
         Instant startTime = Instant.now();
 
         System.out.println("Start count permutations...");
@@ -89,19 +88,16 @@ public class WorkerService {
                 }
             }
 
-            // Вычисляем прогресс выполнения
             double progress = (idx / (double) totalPermutations) * 100;
             progress = Math.round(progress * 100.0) / 100.0;
 
 
             int progressUpdateInterval = Integer.parseInt(System.getenv().getOrDefault("PROGRESS_UPDATE_INTERVAL", "10000"));
 
-            // Каждые progressUpdateInterval итераций отправляем прогресс
             if (idx % progressUpdateInterval == 0) {
                 sendProgress(body.getRequestId(), progress, body.getPartNumber());
             }
 
-            // Проверка на таймаут
             Duration dur = Duration.between(startTime, Instant.now());
             if (dur.toMillis() > taskTimeout.toMillis()) {
                 System.out.println("Exceeded time limit: exiting");
@@ -113,16 +109,16 @@ public class WorkerService {
         }
 
         System.out.println("End count permutations...");
-        sendProgress(body.getRequestId(), 100.0, body.getPartNumber()); // Если всё перебрали, ставим 100%
+        sendProgress(body.getRequestId(), 100.0, body.getPartNumber());
     }
 
-    private void sendAnswer(String id, String answer, double progress, int partNumber) { // Отправка ответа менеджеру
+    private void sendAnswer(String id, String answer, double progress, int partNumber) { 
 
         CrackHashWorkerResponse response = new CrackHashWorkerResponse();
         response.setRequestId(id);
         response.setAnswers(new CrackHashWorkerResponse.Answers());
         response.getAnswers().getWords().add(answer);
-        response.setProgress(progress); // Передаём прогресс 100%
+        response.setProgress(progress); 
         response.setPartNumber(partNumber);
 
         System.out.println(" [>] Sending result: " + response);
@@ -138,7 +134,7 @@ public class WorkerService {
     response.setPartNumber(partNumber);
 
     CrackHashWorkerResponse.Answers answers = new CrackHashWorkerResponse.Answers();
-    answers.setWords(List.of("")); // Можно пусто тоже, но не null
+    answers.setWords(List.of("")); 
     response.setAnswers(answers);
 
     System.out.println(" [>] Sending progress: " + response);

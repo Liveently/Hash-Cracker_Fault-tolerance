@@ -33,8 +33,10 @@ import ru.kosolap.mongo.ResultRepository;
 import ru.kosolap.mongo.ResultEntity;
 import ru.kosolap.mongo.TaskEntity;
 import javax.annotation.PostConstruct;  
-import java.util.Optional;  // Добавьте эту строку в начало файла
+import java.util.Optional; 
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 @Service
 public class ManagerService {
@@ -82,21 +84,18 @@ public void recoverFromMongo() {
         System.out.println("[RECOVERY] Восстановление задачи: " + task.getRequestId() + 
                          ", статус: " + task.getStatus());
 
-        // Создаем статус задачи
         TaskStatus taskStatus = new TaskStatus();
         taskStatus.setStatus(task.getStatus());
         taskStatus.setAnswer(new ArrayList<>(task.getAnswer()));
         
-        // Явно создаем ConcurrentHashMap с указанием типов
         ConcurrentHashMap<Integer, Double> progressMap = new ConcurrentHashMap<>();
         taskStatus.setProgressMap(progressMap);
 
-        // Восстанавливаем прогресс
         List<ResultEntity> results = resultRepository.findAllByRequestId(task.getRequestId());
         System.out.println("[RECOVERY] Найдено результатов для задачи: " + results.size());
 
         for (ResultEntity result : results) {
-            progressMap.put(result.getPartNumber(), result.getProgress());
+          progressMap.put(result.getPartNumber(), result.getProgress());
         }
 
 
@@ -144,9 +143,9 @@ public void recoverFromMongo() {
         task.setCreatedAt(Instant.now());
         task.setAnswer(new ArrayList<>());
         task.setTotalProgress(0.0);
-        taskRepository.save(task);  // Сохраняем задачу
+        taskRepository.save(task);  
 
-        idAndStatus.put(requestId, new TaskStatus()); // Статус автоматически будет IN_PROGRESS
+        idAndStatus.put(requestId, new TaskStatus()); 
 
         CrackHashManagerRequest request = new CrackHashManagerRequest();
 
@@ -172,9 +171,8 @@ public void recoverFromMongo() {
             );
             System.out.println("Request part " + part + " sent successfully");
         } catch (Exception e) {
-            // Логирование ошибки при отправке сообщения
-            System.out.println("Failed to send part " + part + " to RabbitMQ");
-            e.printStackTrace();  // Выводим трассировку стека ошибки
+            taskRepository.delete(task);
+             return null;
         }
         }
 
@@ -225,26 +223,23 @@ public void recieveAnswer(CrackHashWorkerResponse response) {
     }
 
     synchronized (status) {
-        // Проверка на дубликаты
+
         if (status.getAnswer().contains(answer)) {
             return;
         }
 
-        // Сохраняем результат
         ResultEntity result = new ResultEntity();
         result.setId(UUID.randomUUID().toString());
         result.setRequestId(response.getRequestId());
         result.setPartNumber(response.getPartNumber());
         result.setAnswer(answer);
-        result.setProgress(response.getProgress()); // При нахождении ответа устанавливаем 100%
+        result.setProgress(100); 
         resultRepository.save(result);
 
-        // Обновляем статус
+
         status.getAnswer().add(answer);
-        status.updateProgress(response.getPartNumber(), response.getProgress()); // Прогресс части = 100%
         status.setStatus(calculateCurrentStatus(status));
 
-        // Обновляем задачу в MongoDB
         updateTaskEntity(response.getRequestId(), status);
     }
 }
@@ -259,11 +254,9 @@ public void updateProgress(CrackHashWorkerResponse response) {
     
     synchronized (status) {
 
-        // Обновляем прогресс
         status.updateProgress(response.getPartNumber(), response.getProgress());
         status.setStatus(calculateCurrentStatus(status));
 
-        // Сохраняем/обновляем запись прогресса
         ResultEntity progressEntity = resultRepository
             .findByRequestIdAndPartNumber(response.getRequestId(), response.getPartNumber())
             .orElseGet(() -> createNewProgressEntity(response));
@@ -271,7 +264,6 @@ public void updateProgress(CrackHashWorkerResponse response) {
         progressEntity.setProgress(response.getProgress());
         resultRepository.save(progressEntity);
 
-        // Обновляем задачу
         updateTaskEntity(response.getRequestId(), status);
     }
 }

@@ -35,10 +35,8 @@ public class WorkerService {
         String workerPort = System.getenv("WORKER_PORT");  
         String workerUrl = "http://" + ip + ":" + workerPort + "/health";  
 
-        // Таймаут в миллисекундах
         int timeout = Integer.parseInt(System.getenv().getOrDefault("HEALTH_CHECK_TIMEOUT", "5000"));  // Получаем таймаут из окружения
 
-        // Создаем RestTemplate с таймаутом
         RestTemplate restTemplate = createRestTemplateWithTimeout(timeout);
 
         try {
