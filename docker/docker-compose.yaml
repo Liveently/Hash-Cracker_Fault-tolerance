@@ -113,15 +113,18 @@ services:
       - app-network
     restart: unless-stopped
 
-  ui:
-    image: nginx:latest
-    container_name: hash-cracker-ui
-    volumes:
-      - ./ui:/usr/share/nginx/html
-    ports:
-      - "8081:80"
-    depends_on:
-      - manager
-    networks:
-      - app-network
-    restart: unless-stopped
+ui:
+  build:
+    context: .
+    dockerfile: ui/Dockerfile
+  container_name: hash-cracker-ui
+  ports:
+    - "8081:80"
+  environment:
+    API_HOST: localhost
+    API_PORT: 8080
+  depends_on:
+    - manager
+  networks:
+    - app-network
+  restart: unless-stopped
